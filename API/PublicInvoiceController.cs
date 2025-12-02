@@ -37,7 +37,7 @@ public class PublicInvoiceController : ControllerBase
         try
         {
             // Validate the token
-            NewDispatch.DTO.ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
+            ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
 
             if (validationResult == null || !validationResult.IsValid)
             {
@@ -105,7 +105,7 @@ public class PublicInvoiceController : ControllerBase
         try
         {
             // Validate the token
-            var validationResult = await _dataServiceClient.ValidateTokenAsync(token);
+            ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
 
             if (validationResult == null || !validationResult.IsValid)
             {
@@ -154,7 +154,7 @@ public class PublicInvoiceController : ControllerBase
         try
         {
             // Validate the token
-            var validationResult = await _dataServiceClient.ValidateTokenAsync(token);
+            ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
 
             if (validationResult == null || !validationResult.IsValid)
             {
@@ -225,7 +225,7 @@ public class PublicInvoiceController : ControllerBase
         try
         {
             // Validate the token
-            var validationResult = await _dataServiceClient.ValidateTokenAsync(token);
+            ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
 
             if (validationResult == null || !validationResult.IsValid)
             {

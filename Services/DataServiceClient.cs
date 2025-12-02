@@ -1,7 +1,7 @@
-using NewDispatch.DTO;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DispatchPublic.DTO;
 
 namespace DispatchPublic.Services;
 
@@ -74,7 +74,7 @@ public class DataServiceClient
         }
     }
 
-        /// <summary>
+    /// <summary>
     /// Submits a signature for a token
     /// </summary>
     public async Task<bool> SubmitSignatureAsync(Guid invoiceId, string signaturePath)
