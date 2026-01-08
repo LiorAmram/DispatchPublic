@@ -48,13 +48,13 @@ public class DataServiceClient
     }
 
     /// <summary>
-    /// Marks a token as viewed
+    /// Marks an invoice as viewed using the token for validation.
     /// </summary>
-    public async Task<bool> MarkTokenAsViewedAsync(Guid tokenId)
+    public async Task<bool> MarkAsViewedAsync(string token)
     {
         try
         {
-            var requestUri = $"/internal/invoice-portal/{tokenId}/viewed";
+            var requestUri = $"/internal/invoice-portal/viewed?token={Uri.EscapeDataString(token)}";
             var response = await _httpClient.PostAsync(requestUri, null);
 
             if (response.IsSuccessStatusCode)
@@ -63,25 +63,25 @@ public class DataServiceClient
             }
             else
             {
-                _logger.LogWarning("Mark token as viewed failed with status {StatusCode}", response.StatusCode);
+                _logger.LogWarning("Mark as viewed failed with status {StatusCode}", response.StatusCode);
                 return false;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error marking token as viewed");
+            _logger.LogError(ex, "Error marking invoice as viewed");
             return false;
         }
     }
 
     /// <summary>
-    /// Submits a signature for a token
+    /// Submits a signature for an invoice using the token for validation.
     /// </summary>
-    public async Task<bool> SubmitSignatureAsync(Guid invoiceId, string signaturePath)
+    public async Task<bool> SubmitSignatureAsync(string token, string signaturePath)
     {
         try
         {
-            var requestUri = $"/internal/invoice-portal/{invoiceId}/signature";
+            var requestUri = $"/internal/invoice-portal/signature?token={Uri.EscapeDataString(token)}";
             var requestDto = new SubmitSignatureDTO { SignaturePath = signaturePath };
             var response = await _httpClient.PostAsJsonAsync(requestUri, requestDto);
 
@@ -101,4 +101,39 @@ public class DataServiceClient
             return false;
         }
     }
+
+    /// <summary>
+    /// Ensures invoice PDF is current, regenerating if invalidated.
+    /// Uses the token for validation.
+    /// </summary>
+    public async Task<EnsurePdfResult?> EnsurePdfCurrentAsync(string token)
+    {
+        try
+        {
+            var requestUri = $"/internal/invoice-portal/ensure-pdf?token={Uri.EscapeDataString(token)}";
+            var response = await _httpClient.GetAsync(requestUri);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<EnsurePdfResult>();
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Ensure PDF current failed with status {StatusCode}", response.StatusCode);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ensuring PDF is current");
+            return null;
+        }
+    }
+}
+
+public class EnsurePdfResult
+{
+    public string StorageKey { get; set; } = string.Empty;
+    public bool WasRegenerated { get; set; }
 }

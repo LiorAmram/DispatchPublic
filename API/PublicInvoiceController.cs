@@ -119,18 +119,38 @@ public class PublicInvoiceController : ControllerBase
                 return BadRequest("Token does not match invoice");
             }
 
-            if (string.IsNullOrEmpty(validationResult.PdfStorageKey))
+            // Ensure PDF is current (may regenerate if invalidated)
+            // Use token for validation - org ID is extracted on the data service side
+            string pdfStorageKey = validationResult.PdfStorageKey;
+            try
+            {
+                var result = await _dataServiceClient.EnsurePdfCurrentAsync(token);
+                if (result != null && !string.IsNullOrEmpty(result.StorageKey))
+                {
+                    pdfStorageKey = result.StorageKey;
+                    if (result.WasRegenerated)
+                    {
+                        _logger.LogInformation("PDF was regenerated for invoice {InvoiceId}", invoiceId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to ensure PDF current, using cached key for invoice {InvoiceId}", invoiceId);
+            }
+
+            if (string.IsNullOrEmpty(pdfStorageKey))
             {
                 _logger.LogError("No PDF storage key found for valid token");
                 return StatusCode(500, "PDF not available");
             }
 
             // Stream the PDF directly from invoice service
-            var pdfStream = await _invoiceServiceClient.StreamPdfAsync(validationResult.PdfStorageKey);
+            var pdfStream = await _invoiceServiceClient.StreamPdfAsync(pdfStorageKey);
 
             if (pdfStream == null)
             {
-                _logger.LogError("Failed to stream PDF for storage key {StorageKey}", validationResult.PdfStorageKey);
+                _logger.LogError("Failed to stream PDF for storage key {StorageKey}", pdfStorageKey);
                 return StatusCode(500, "PDF temporarily unavailable");
             }
 
@@ -153,7 +173,7 @@ public class PublicInvoiceController : ControllerBase
     {
         try
         {
-            // Validate the token
+            // Validate the token first to check invoice ID match
             ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
 
             if (validationResult == null || !validationResult.IsValid)
@@ -175,9 +195,8 @@ public class PublicInvoiceController : ControllerBase
                 });
             }
 
-            // For this simplified version, we'll assume token ID is available
-            // In reality, you'd extract it from the validation result
-            var success = await _dataServiceClient.MarkTokenAsViewedAsync(invoiceId);
+            // Use token for the internal call - org ID is extracted on the data service side
+            var success = await _dataServiceClient.MarkAsViewedAsync(token);
 
             if (!success)
             {
@@ -224,7 +243,7 @@ public class PublicInvoiceController : ControllerBase
 
         try
         {
-            // Validate the token
+            // Validate the token first to check invoice ID match
             ValidateInvoicePortalTokenResponseDTO validationResult = await _dataServiceClient.ValidateTokenAsync(token);
 
             if (validationResult == null || !validationResult.IsValid)
@@ -246,7 +265,8 @@ public class PublicInvoiceController : ControllerBase
                 });
             }
 
-            var success = await _dataServiceClient.SubmitSignatureAsync(invoiceId, request.SignaturePath);
+            // Use token for the internal call - org ID is extracted on the data service side
+            var success = await _dataServiceClient.SubmitSignatureAsync(token, request.SignaturePath);
 
             if (!success)
             {
